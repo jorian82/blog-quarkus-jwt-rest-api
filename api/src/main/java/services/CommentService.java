@@ -2,10 +2,12 @@ package services;
 
 import entities.Comment;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
 import mappers.CommentMapper;
 import models.CommentDTO;
 import org.bson.types.ObjectId;
+import repositories.CommentRepository;
 import responses.CommentResponseRest;
 
 import java.util.ArrayList;
@@ -19,6 +21,9 @@ import java.util.List;
 @ApplicationScoped
 public class CommentService implements ICommentService{
 
+    @Inject
+    CommentRepository commentRepository;
+
     @Override
     public Response saveComment(CommentDTO dto) {
         CommentResponseRest result = new CommentResponseRest();
@@ -27,7 +32,7 @@ public class CommentService implements ICommentService{
         try {
             Comment comment = CommentMapper.dtoToComment(dto);
             if(comment != null) {
-                comment.persist();
+                commentRepository.persist(comment);
                 dtos.add(CommentMapper.commentToDto(comment));
                 result.getCommentResponse().setComments(dtos);
                 result.setMetadata(Response.Status.OK.name(), Response.Status.OK.getStatusCode(), Response.Status.Family.SUCCESSFUL.name());
@@ -49,7 +54,7 @@ public class CommentService implements ICommentService{
         try{
             Comment comment = CommentMapper.dtoToComment(dto);
             if(comment != null) {
-                comment.update();
+                commentRepository.update(comment);
                 dtos.add(CommentMapper.commentToDto(comment));
                 result.getCommentResponse().setComments(dtos);
                 result.setMetadata(Response.Status.OK.name(), Response.Status.OK.getStatusCode(), Response.Status.Family.SUCCESSFUL.name());
@@ -68,7 +73,7 @@ public class CommentService implements ICommentService{
         CommentResponseRest result = new CommentResponseRest();
 
         try {
-            Comment.deleteById(id);
+            commentRepository.delete("_id", new ObjectId(id));
             result.setMetadata(Response.Status.OK.name(), Response.Status.OK.getStatusCode(), Response.Status.Family.SUCCESSFUL.name());
         } catch ( Exception e ) {
             result.setMetadata(Response.Status.INTERNAL_SERVER_ERROR.name(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), Response.Status.Family.SERVER_ERROR.name());

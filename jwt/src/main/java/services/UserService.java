@@ -1,10 +1,14 @@
 package services;
 
 import entities.User;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
 import mappers.UserMapper;
 import models.UserDTO;
+import repositories.UserRepository;
 import responses.UserResponseRest;
 
 import java.util.ArrayList;
@@ -17,22 +21,31 @@ import java.util.List;
  */
 @ApplicationScoped
 public class UserService implements IUserService{
+
+    @Inject
+    UserRepository userRepository;
+
     @Override
+    @PermitAll
     public Response login(String username, String password) {
+        User logged = (User) userRepository.find("username", username);
         return Response.ok().build();
     }
 
+    @PermitAll
     @Override
     public Response logout() {
         return Response.ok().build();
     }
 
+    @RolesAllowed({"admin", "creator"})
     @Override
     public Response changePassword(String username, String oldPassword, String newPassword) {
         return Response.ok().build();
     }
 
     @Override
+    @RolesAllowed({"admin"})
     public Response addUser(UserDTO dto) {
         UserResponseRest result = new UserResponseRest();
         List<UserDTO> dtos = new ArrayList<>();
@@ -40,7 +53,7 @@ public class UserService implements IUserService{
         try {
             User user = UserMapper.dtoToEntity(dto);
             if(user != null) {
-                user.persist();
+                userRepository.persist(user);
                 dtos.add(UserMapper.entityToDto(user));
                 result.getUserResponse().setUsers(dtos);
                 result.setMetadata(Response.Status.CREATED.name(), Response.Status.CREATED.getStatusCode(), Response.Status.CREATED.getReasonPhrase());
@@ -56,6 +69,7 @@ public class UserService implements IUserService{
     }
 
     @Override
+    @RolesAllowed({"admin"})
     public Response deleteUser(String id) {
         return null;
     }
