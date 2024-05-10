@@ -1,6 +1,8 @@
 package services;
 
 import entities.User;
+import io.quarkus.mongodb.panache.PanacheQuery;
+import io.smallrye.jwt.build.Jwt;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -9,10 +11,10 @@ import jakarta.ws.rs.core.Response;
 import mappers.UserMapper;
 import models.UserDTO;
 import repositories.UserRepository;
+import responses.TokenResponseRest;
 import responses.UserResponseRest;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by jra, SSDE Inc
@@ -26,10 +28,40 @@ public class UserService implements IUserService{
     UserRepository userRepository;
 
     @Override
-    @PermitAll
     public Response login(String username, String password) {
-        User logged = (User) userRepository.find("username", username);
-        return Response.ok().build();
+        TokenResponseRest response = new TokenResponseRest();
+        User logged = userRepository.find("username", username).firstResult();
+        Set<String> roles = new HashSet<>(
+                Arrays.asList("admin","creator")
+        );
+
+//        if (logged == null) {
+//            response.setMetadata(Response.Status.NOT_FOUND.name(), Response.Status.NOT_FOUND.getStatusCode(), "Username/Password incorrect");
+//            return Response.ok().entity(response).build();//.entity("Username/Password do not match any user").build();
+//        } else {
+//            roles = new HashSet<>(
+//                    Arrays.asList(logged.role.split(","))
+//            );
+//        }
+
+        long duration = System.currentTimeMillis()+3600;
+
+        final String token = Jwt.issuer("www.ssde.com.mx")
+                .subject("blog-api")
+                .groups(roles)
+                .expiresAt(duration)
+                .sign();
+
+        try {
+            response.getTokenResponse().setToken(token);
+            response.setMetadata(Response.Status.OK.name(), Response.Status.OK.getStatusCode(), Response.Status.Family.SUCCESSFUL.name());
+        } catch (Exception e) {
+            response.setMetadata(Response.Status.INTERNAL_SERVER_ERROR.name(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e.getMessage());
+            e.getStackTrace();
+            return Response.serverError().entity(response).build();
+        }
+
+        return Response.ok().entity(response).build();
     }
 
     @PermitAll
